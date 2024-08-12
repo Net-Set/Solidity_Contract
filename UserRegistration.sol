@@ -39,7 +39,7 @@ contract RonxRegistration {
         string memory _uplineId // Upline ID parameter
     ) public payable {
         require(bytes(users[msg.sender].userId).length == 0, "User already registered.");
-        // require(msg.value == 25 ether, "Registration requires at least 25 Ether.");
+        require(msg.value == 25 ether, "Registration requires at least 25 Ether.");
 
         string memory userId = generateUserId();
 
