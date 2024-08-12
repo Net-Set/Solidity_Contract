@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 contract RonxRegistration {
     address public owner;
+    uint256 public cycleCount;
+    uint256 private usersInCurrentCycle;
 
     struct User {
         string firstName;
@@ -14,15 +16,18 @@ contract RonxRegistration {
         string uplineId; // Added upline ID field
         address walletAddress;
         string referralLink;
+        uint256 cycle; // Track the cycle in which the user is registered
     }
 
     mapping(address => User) public users;
     address[] public userAddresses;
 
-    event UserRegistered(address indexed walletAddress, string userId, string uplineId, string referralLink);
+    event UserRegistered(address indexed walletAddress, string userId, string uplineId, string referralLink, uint256 cycle);
 
     constructor() {
         owner = msg.sender; // Set the contract deployer as the owner
+        cycleCount = 1; // Start with the first cycle
+        usersInCurrentCycle = 0; // Initialize the counter for users in the current cycle
     }
 
     function registerUser(
@@ -34,7 +39,7 @@ contract RonxRegistration {
         string memory _uplineId // Upline ID parameter
     ) public payable {
         require(bytes(users[msg.sender].userId).length == 0, "User already registered.");
-        require(msg.value == 25 ether, "Registration requires at least 25 Ether.");
+        // require(msg.value == 25 ether, "Registration requires at least 25 Ether.");
 
         string memory userId = generateUserId();
 
@@ -44,6 +49,14 @@ contract RonxRegistration {
         } else {
             _uplineId = ""; // No upline required for the first user
         }
+
+        // Check if the cycle should be incremented after every three new users
+        if (usersInCurrentCycle == 4) {
+            cycleCount++;
+            usersInCurrentCycle = 0; // Reset the counter for the new cycle
+        }
+
+        usersInCurrentCycle++; // Increment the user counter within the current cycle
 
         string memory referralLink = generateReferralLink(userId);
 
@@ -56,12 +69,13 @@ contract RonxRegistration {
             userId: userId,
             uplineId: _uplineId, // Store upline ID
             walletAddress: msg.sender,
-            referralLink: referralLink
+            referralLink: referralLink,
+            cycle: cycleCount // Store the current cycle
         });
 
         userAddresses.push(msg.sender);
         payable(owner).transfer(msg.value);
-        emit UserRegistered(msg.sender, userId, _uplineId, referralLink);
+        emit UserRegistered(msg.sender, userId, _uplineId, referralLink, cycleCount);
     }
 
     function generateUserId() internal view returns (string memory) {
