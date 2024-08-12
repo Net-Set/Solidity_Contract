@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register User with Web3</title>
+    <script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js@1.3.0/dist/web3.min.js"></script>
+</head>
+<body>
+    <h1>Register User</h1>
+    <form id="registerForm">
+        <label for="email">Email:</label>
+        <input type="email" id="email" required><br><br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" required><br><br>
+        <label for="walletAddress">Wallet Address:</label>
+        <input type="text" id="walletAddress" required><br><br>
+        <label for="referralAddress">Referral Address:</label>
+        <input type="text" id="referralAddress"><br><br>
+        <button type="submit">Register</button>
+    </form>
+
+    <h2>Fetch User Data</h2>
+    <button id="fetchUserData">Get All Users</button>
+    <div id="userData"></div>
+
+    <script>
+        const contractAddress = '0xde7a910aeed285b4cd2b61c594f4ffea39368935';
+        const contractABI = [
+	{
+		"inputs": [
+			{
+				"internalType": "string",
+				"name": "_email",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "_password",
+				"type": "string"
+			},
+			{
+				"internalType": "address",
+				"name": "_walletAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "_referralAddress",
+				"type": "address"
+			}
+		],
+		"name": "registerUser",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "getUserData",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "string",
+						"name": "email",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "password",
+						"type": "string"
+					},
+					{
+						"internalType": "address",
+						"name": "walletAddress",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "referralAddress",
+						"type": "address"
+					}
+				],
+				"internalType": "struct UserRegistration.User[]",
+				"name": "",
+				"type": "tuple[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "address",
+				"name": "",
+				"type": "address"
+			}
+		],
+		"name": "getUserDataByWalletAddress",
+		"outputs": [
+			{
+				"components": [
+					{
+						"internalType": "string",
+						"name": "email",
+						"type": "string"
+					},
+					{
+						"internalType": "string",
+						"name": "password",
+						"type": "string"
+					},
+					{
+						"internalType": "address",
+						"name": "walletAddress",
+						"type": "address"
+					},
+					{
+						"internalType": "address",
+						"name": "referralAddress",
+						"type": "address"
+					}
+				],
+				"internalType": "struct UserRegistration.User[]",
+				"name": "",
+				"type": "tuple[]"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [
+			{
+				"internalType": "uint256",
+				"name": "",
+				"type": "uint256"
+			}
+		],
+		"name": "users",
+		"outputs": [
+			{
+				"internalType": "string",
+				"name": "email",
+				"type": "string"
+			},
+			{
+				"internalType": "string",
+				"name": "password",
+				"type": "string"
+			},
+			{
+				"internalType": "address",
+				"name": "walletAddress",
+				"type": "address"
+			},
+			{
+				"internalType": "address",
+				"name": "referralAddress",
+				"type": "address"
+			}
+		],
+		"stateMutability": "view",
+		"type": "function"
+	}
+];
+
+        // Initialize web3
+        const web3 = new Web3(window.ethereum);
+        const contract = new web3.eth.Contract(contractABI, contractAddress);
+
+        // Connect to MetaMask
+        async function connectMetaMask() {
+            if (window.ethereum) {
+                try {
+                    await window.ethereum.request({ method: 'eth_requestAccounts' });
+                    const accounts = await web3.eth.getAccounts();
+                    return accounts[0];
+                } catch (error) {
+                    console.error('User denied account access', error);
+                }
+            } else {
+                console.error('MetaMask is not installed');
+            }
+        }
+
+        // Register User
+        document.getElementById('registerForm').onsubmit = async function(event) {
+            event.preventDefault();
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const walletAddress = document.getElementById('walletAddress').value;
+            const referralAddress = document.getElementById('referralAddress').value;
+
+            const account = await connectMetaMask();
+
+            if (account) {
+                contract.methods.registerUser(email, password, walletAddress, referralAddress)
+                    .send({ from: account })
+                    .on('receipt', function(receipt) {
+                        alert('User registered successfully!');
+                        console.log('Receipt:', receipt);
+                    })
+                    .on('error', function(error) {
+                        alert('Error registering user. Check console for details.');
+                        console.error('Error:', error);
+                    });
+            }
+        };
+
+        // Fetch User Data
+        document.getElementById('fetchUserData').onclick = async function() {
+            const account = await connectMetaMask();
+
+            if (account) {
+                contract.methods.getUserData()
+                    .call({ from: account })
+                    .then(function(data) {
+                        const userDataDiv = document.getElementById('userData');
+                        userDataDiv.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+                    })
+                    .catch(function(error) {
+                        console.error('Error fetching user data:', error);
+                    });
+            }
+        };
+    </script>
+</body>
+</html>
